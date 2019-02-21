@@ -6,6 +6,7 @@ var PluginError = require('plugin-error')
 var rollup = require('rollup')
 var path = require('path')
 var applySourceMap = require('vinyl-sourcemaps-apply')
+var merge = require('lodash.merge')
 var camelCase = require('lodash.camelcase')
 
 var PLUGIN_NAME = 'gulp-better-rollup'
@@ -83,6 +84,13 @@ class GulpRollup extends Transform {
 			assignCertainProperties(outputOptions, inputOptions, propsToCopy)
 			// Rollup won't bundle iife and umd modules without module name.
 			// But it won't say anything either, leaving a space for confusion
+			if (typeof outputOptions.name === 'function')
+				outputOptions.name = outputOptions.name({
+					base: targetFile.base,
+					path: targetFile.path,
+					relative: targetFile.relative,
+					filename: path.basename(targetFile.path)
+				}, targetFile)
 			if (outputOptions.name === undefined)
 				outputOptions.name = inputOptions.name || moduleName
 			if (outputOptions.amd === undefined || outputOptions.amd.id === undefined)
@@ -155,7 +163,7 @@ class GulpRollup extends Transform {
 				if (inputOptions.cache !== false)
 					rollupCache.set(inputOptions.input, bundle)
 				// generate ouput according to (each of) given outputOptions
-				return Promise.all(bundleList.map((outputOptions, i) => createBundle(bundle, outputOptions, i)))
+				return Promise.all(bundleList.map((outputOptions, i) => createBundle(bundle, merge({}, outputOptions), i)))
 			})
 			// pass file to gulp and end stream
 			.then(() => cb(null, file))
